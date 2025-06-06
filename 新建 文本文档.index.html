@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flying Balloons</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .balloon {
+                position: absolute;
+                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                transition: all 0.3s ease;
+                transform-origin: bottom center;
+            }
+            .balloon-string {
+                position: absolute;
+                width: 1px;
+                background-color: #000;
+                transform-origin: top center;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen overflow-hidden flex items-center justify-center">
+    <div class="container mx-auto text-center p-4">
+        <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold mb-6 text-slate-800">Flying Balloons</h1>
+        <div id="balloonContainer" class="relative w-full h-[80vh] border-2 border-slate-300 rounded-lg bg-gradient-to-b from-blue-300 to-blue-100 overflow-hidden"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('balloonContainer');
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+            const balloons = [];
+            const balloonCount = 10;
+
+            // 颜色数组
+            const colors = [
+                'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
+                'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-cyan-500', 
+                'bg-teal-500', 'bg-orange-500'
+            ];
+
+            // 创建气球
+            for (let i = 0; i < balloonCount; i++) {
+                createBalloon();
+            }
+
+            // 创建单个气球
+            function createBalloon() {
+                const balloon = document.createElement('div');
+                const string = document.createElement('div');
+                
+                // 随机属性
+                const size = Math.random() * 50 + 50; // 50-100px
+                const x = Math.random() * (containerWidth - size);
+                const y = containerHeight; // 从底部开始
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const floatSpeed = Math.random() * 2 + 1; // 1-3px/frame
+                const swaySpeed = Math.random() * 0.05 + 0.01; // 摇摆速度
+                const swayAmplitude = Math.random() * 10 + 5; // 摇摆幅度
+                const startAngle = Math.random() * Math.PI * 2; // 摇摆起始角度
+                const sizeChangeSpeed = (Math.random() - 0.5) * 0.1; // 大小变化速度
+                const maxSizeChange = Math.random() * 10 + 5; // 最大大小变化
+                const colorChangeInterval = Math.floor(Math.random() * 3000) + 2000; // 2-5秒
+                
+                // 设置气球样式
+                balloon.className = `balloon ${color}`;
+                balloon.style.width = `${size}px`;
+                balloon.style.height = `${size}px`;
+                balloon.style.left = `${x}px`;
+                balloon.style.bottom = `${y}px`;
+                
+                // 设置绳子样式
+                string.className = 'balloon-string';
+                string.style.height = `${size * 0.7}px`;
+                string.style.left = `${size / 2}px`;
+                string.style.bottom = `-${size * 0.7}px`;
+                
+                balloon.appendChild(string);
+                container.appendChild(balloon);
+                
+                // 气球对象
+                const balloonObj = {
+                    element: balloon,
+                    string: string,
+                    x,
+                    y,
+                    size,
+                    originalSize: size,
+                    floatSpeed,
+                    swaySpeed,
+                    swayAmplitude,
+                    angle: startAngle,
+                    sizeChangeSpeed,
+                    maxSizeChange,
+                    currentSizeChange: 0,
+                    colorChangeTimer: null,
+                    currentColorIndex: colors.indexOf(color)
+                };
+                
+                // 设置颜色变化定时器
+                setColorChangeTimer(balloonObj);
+                
+                balloons.push(balloonObj);
+            }
+
+            // 设置颜色变化定时器
+            function setColorChangeTimer(balloonObj) {
+                balloonObj.colorChangeTimer = setTimeout(() => {
+                    // 移除当前颜色类
+                    balloonObj.element.classList.remove(colors[balloonObj.currentColorIndex]);
+                    
+                    // 选择新颜色
+                    let newColorIndex;
+                    do {
+                        newColorIndex = Math.floor(Math.random() * colors.length);
+                    } while (newColorIndex === balloonObj.currentColorIndex);
+                    
+                    // 添加新颜色类
+                    balloonObj.element.classList.add(colors[newColorIndex]);
+                    balloonObj.currentColorIndex = newColorIndex;
+                    
+                    // 递归设置下一次颜色变化
+                    setColorChangeTimer(balloonObj);
+                }, Math.random() * 3000 + 2000); // 2-5秒
+            }
+
+            // 动画循环
+            function animate() {
+                balloons.forEach(balloon => {
+                    // 更新位置
+                    balloon.y -= balloon.floatSpeed;
+                    balloon.angle += balloon.swaySpeed;
+                    
+                    // 更新大小
+                    balloon.currentSizeChange += balloon.sizeChangeSpeed;
+                    if (Math.abs(balloon.currentSizeChange) > balloon.maxSizeChange) {
+                        balloon.sizeChangeSpeed = -balloon.sizeChangeSpeed;
+                    }
+                    const newSize = balloon.originalSize + balloon.currentSizeChange;
+                    
+                    // 更新摇摆位置
+                    const swayX = Math.sin(balloon.angle) * balloon.swayAmplitude;
+                    
+                    // 应用变化
+                    balloon.element.style.bottom = `${balloon.y}px`;
+                    balloon.element.style.left = `${balloon.x + swayX}px`;
+                    balloon.element.style.width = `${newSize}px`;
+                    balloon.element.style.height = `${newSize}px`;
+                    balloon.string.style.height = `${newSize * 0.7}px`;
+                    balloon.string.style.bottom = `-${newSize * 0.7}px`;
+                    balloon.string.style.left = `${newSize / 2}px`;
+                    
+                    // 如果气球飞出顶部，重置到屏幕底部
+                    if (balloon.y > containerHeight + 100) {
+                        resetBalloon(balloon);
+                    }
+                });
+                
+                requestAnimationFrame(animate);
+            }
+
+            // 重置气球
+            function resetBalloon(balloon) {
+                // 清除颜色变化定时器
+                clearTimeout(balloon.colorChangeTimer);
+                
+                // 重置属性
+                balloon.y = containerHeight;
+                balloon.x = Math.random() * (containerWidth - balloon.originalSize);
+                balloon.angle = Math.random() * Math.PI * 2;
+                balloon.currentSizeChange = 0;
+                
+                // 随机新颜色
+                balloon.element.classList.remove(colors[balloon.currentColorIndex]);
+                balloon.currentColorIndex = Math.floor(Math.random() * colors.length);
+                balloon.element.classList.add(colors[balloon.currentColorIndex]);
+                
+                // 设置新的颜色变化定时器
+                setColorChangeTimer(balloon);
+            }
+
+            // 开始动画
+            animate();
+
+            // 响应窗口大小变化
+            window.addEventListener('resize', () => {
+                const newRect = container.getBoundingClientRect();
+                containerWidth = newRect.width;
+                containerHeight = newRect.height;
+            });
+        });
+    </script>
+</body>
+</html>
